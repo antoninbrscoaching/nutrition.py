@@ -62,7 +62,8 @@ c1, c2 = st.columns(2)
 with c1:
     heures = st.number_input("Heures", 0, 40, 2)
 with c2:
-    minutes = st.selectbox("Minutes", [0, 15, 30, 45], index=3)
+    # 🔹 MODIFICATION : pas de 5 minutes
+    minutes = st.selectbox("Minutes", list(range(0, 60, 5)), index=0)
 duree = heures_entiere_et_minutes(heures, minutes)
 
 # --- Calcul besoin g/h
@@ -186,8 +187,8 @@ for ligne in plan:
 st.markdown("---")
 st.header("🧠 Gut Training – Plan d’adaptation digestive sur 6 semaines")
 
-target = mid  # objectif calculé
-start = target * 0.6  # commence à 60 % de la cible
+target = mid
+start = target * 0.6  # 60 % de la cible
 steps = np.linspace(start, target, 6)
 
 st.markdown("### 📆 Progression hebdomadaire vers la tolérance optimale")
