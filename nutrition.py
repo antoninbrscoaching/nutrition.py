@@ -5,12 +5,12 @@ import math
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Calculateur & Plan Nutrition", page_icon="🏃‍♂️", layout="centered")
 
-st.title("🏃‍♂️ Calculateur de nutrition + plan réaliste arrondi")
+st.title("🏃‍♂️ Calculateur de nutrition + plan réaliste arrondi + Gut Training")
 st.markdown(
     """
-    Calcule tes besoins en **glucides (g/h)** et obtiens un plan concret,  
-    avec des prises **toutes les 20 à 30 minutes arrondies à la minute la plus proche**,  
-    qui couvre **exactement** ta course.
+    Calcule tes besoins en **glucides (g/h)** et obtiens :
+    - un **plan d’ingestion réaliste** toutes les 20 à 30 minutes (arrondi à la minute),  
+    - un **plan de gut training progressif** sur 6 semaines pour améliorer la tolérance digestive.
     """
 )
 
@@ -51,7 +51,7 @@ with col1:
     poids = st.number_input("Poids (kg)", 40.0, 120.0, 70.0)
     rpe = st.slider("Intensité perçue (RPE/10)", 1, 10, 7)
 with col2:
-    temperature = st.slider("Température (°C)", -5.0, 40.0, 20.0)
+    temperature = st.slider("Température (°C)", -5.0, 40.0, 20.0, step=0.5)
     sudation = st.slider("Sudation (0=faible, 10=forte)", 0, 10, 5)
 with col3:
     digestif = st.slider("Tolérance digestive (0=sensible, 10=aucune gêne)", 0, 10, 8)
@@ -142,13 +142,10 @@ st.header("🕒 Plan nutrition (intervalle arrondi entre 20 et 30 min)")
 
 duree_minutes = duree * 60
 nb_intervalles = max(1, round(duree_minutes / 25))
-intervalle = round(duree_minutes / nb_intervalles)  # arrondi à la minute
-
-# Force dans la plage 20–30 min
+intervalle = round(duree_minutes / nb_intervalles)
 intervalle = int(clamp(intervalle, 20, 30))
 nb_intervalles = math.ceil(duree_minutes / intervalle)
 
-# Recalcule pour finir pile à la fin
 gel_frac = gel_total / nb_intervalles
 boisson_frac = boisson_total / nb_intervalles
 barre_frac = barre_total / nb_intervalles
@@ -185,8 +182,25 @@ st.markdown("### 📋 Exemple de plan réaliste (toutes les ~20–30 min)")
 for ligne in plan:
     st.write(ligne)
 
+# ---------------- GUT TRAINING PLAN ----------------
+st.markdown("---")
+st.header("🧠 Gut Training – Plan d’adaptation digestive sur 6 semaines")
+
+target = mid  # objectif calculé
+start = target * 0.6  # commence à 60 % de la cible
+steps = np.linspace(start, target, 6)
+
+st.markdown("### 📆 Progression hebdomadaire vers la tolérance optimale")
+for i, g in enumerate(steps, 1):
+    st.write(f"**Semaine {i} :** viser environ **{g:.0f} g/h**")
+st.caption(
+    "Commence à 60 % de la cible pour éviter l'inconfort, puis augmente chaque semaine "
+    "jusqu'à la tolérance complète à la semaine 6."
+)
+
 st.markdown("---")
 st.caption(
+    "Basé sur Jeukendrup (2017), Burke (2021) et Stellingwerff (2019). "
     "Intervalle ajusté automatiquement et arrondi à la minute (20–30 min). "
     "Total consommé = quantités prévues exactement."
 )
