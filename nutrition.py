@@ -5,11 +5,12 @@ import math
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Calculateur & Plan Nutrition", page_icon="🏃‍♂️", layout="centered")
 
-st.title("🏃‍♂️ Calculateur complet de nutrition + plan d’ingestion lisible")
+st.title("🏃‍♂️ Calculateur de nutrition + plan réaliste arrondi")
 st.markdown(
     """
-    Calcule tes besoins en glucides (g/h) et obtiens un **plan concret toutes les 20 minutes** :  
-    demi-gels, gorgées, tiers de barres… bref, des recommandations *réalistes et applicables*.
+    Calcule tes besoins en **glucides (g/h)** et obtiens un plan concret,  
+    avec des prises **toutes les 20 à 30 minutes arrondies à la minute la plus proche**,  
+    qui couvre **exactement** ta course.
     """
 )
 
@@ -29,13 +30,12 @@ def format_gel_portion(value):
     else: return "1 gel"
 
 def format_barre_portion(value):
-    if value < 0.33: return "un petit morceau de barre (~⅓)"
-    elif value < 0.66: return "½ barre"
-    elif value < 1.0: return "¾ barre"
+    if value < 0.25: return "un petit morceau de barre"
+    elif value < 0.5: return "½ barre"
+    elif value < 0.75: return "¾ barre"
     else: return "1 barre"
 
 def format_flask_portion(value):
-    # 1 flasque = 500 ml ≈ 10 gorgées
     gorgées = round(value * 10)
     if gorgées <= 1: return "1 gorgée"
     elif gorgées <= 3: return "2-3 gorgées"
@@ -60,9 +60,9 @@ with col3:
 st.subheader("⏱ Durée de l'effort")
 c1, c2 = st.columns(2)
 with c1:
-    heures = st.number_input("Heures", 0, 40, 3)
+    heures = st.number_input("Heures", 0, 40, 2)
 with c2:
-    minutes = st.selectbox("Minutes", [0, 15, 30, 45], index=0)
+    minutes = st.selectbox("Minutes", [0, 15, 30, 45], index=3)
 duree = heures_entiere_et_minutes(heures, minutes)
 
 # --- Calcul besoin g/h
@@ -94,7 +94,7 @@ st.write(f"**Min : {g_min:.0f} g/h | Cible : {mid:.0f} g/h | Max : {g_ma
 st.markdown("---")
 
 # ---------------- SIMULATEUR ----------------
-st.header("🥤 Stratégie nutritionnelle totale (course complète)")
+st.header("🥤 Stratégie nutritionnelle (total sur la course)")
 
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -110,7 +110,7 @@ with col3:
     barre_glucides = st.number_input("Glucides/barre (g)", 10, 60, 40)
     barre_ratio = st.slider("Ratio glucose/fructose (barre)", 0.5, 2.0, 1.0, 0.1)
 
-# --- Calcul total et ratio
+# --- Ratio global
 glu_gel, fru_gel = calc_ratio_parts(gel_ratio)
 glu_boisson, fru_boisson = calc_ratio_parts(boisson_ratio)
 glu_barre, fru_barre = calc_ratio_parts(barre_ratio)
@@ -129,6 +129,7 @@ total_glucides = glu_total + fru_total
 glucides_h = total_glucides / duree if duree > 0 else 0
 ratio_global = glu_total / fru_total if fru_total > 0 else np.nan
 
+# Ratio feedback
 if 0.8 <= ratio_global <= 1.2:
     ratio_msg = "✅ Excellent ratio (absorption optimale)."
 elif ratio_global < 0.8:
@@ -136,17 +137,25 @@ elif ratio_global < 0.8:
 else:
     ratio_msg = "⚠️ Trop de glucose (absorption limitée)."
 
-# ---------------- PLAN LISIBLE TOUTES LES 20 MIN ----------------
-st.header("🕒 Plan nutrition toutes les 20 minutes")
+# ---------------- PLAN DYNAMIQUE ARRONDI ----------------
+st.header("🕒 Plan nutrition (intervalle arrondi entre 20 et 30 min)")
 
-nb_intervalles = int((duree * 60) / 20)
-gel_frac = gel_total / nb_intervalles if nb_intervalles else 0
-boisson_frac = boisson_total / nb_intervalles if nb_intervalles else 0
-barre_frac = barre_total / nb_intervalles if nb_intervalles else 0
+duree_minutes = duree * 60
+nb_intervalles = max(1, round(duree_minutes / 25))
+intervalle = round(duree_minutes / nb_intervalles)  # arrondi à la minute
+
+# Force dans la plage 20–30 min
+intervalle = int(clamp(intervalle, 20, 30))
+nb_intervalles = math.ceil(duree_minutes / intervalle)
+
+# Recalcule pour finir pile à la fin
+gel_frac = gel_total / nb_intervalles
+boisson_frac = boisson_total / nb_intervalles
+barre_frac = barre_total / nb_intervalles
 
 plan = []
 for i in range(nb_intervalles):
-    temps = i * 20
+    temps = int(i * intervalle)
     contenu = []
     if gel_frac > 0:
         contenu.append(format_gel_portion(gel_frac))
@@ -162,6 +171,7 @@ st.write(f"- Total glucides : **{total_glucides:.0f} g** sur {duree:.2f} h")
 st.write(f"- Moyenne : **{glucides_h:.0f} g/h** (objectif {mid:.0f} g/h)")
 st.write(f"- Ratio global glucose : fructose ≈ **{ratio_global:.2f} : 1**")
 st.info(ratio_msg)
+st.write(f"🕒 Intervalle entre prises : **{intervalle} minutes**")
 
 ecart = glucides_h - mid
 if abs(ecart) < 5:
@@ -171,12 +181,12 @@ elif ecart > 0:
 else:
     st.info(f"ℹ️ -{abs(ecart):.0f} g/h sous la cible — ajoute un peu d’apport.")
 
-st.markdown("### 📋 Exemple de plan réaliste (toutes les 20 min)")
+st.markdown("### 📋 Exemple de plan réaliste (toutes les ~20–30 min)")
 for ligne in plan:
     st.write(ligne)
 
 st.markdown("---")
 st.caption(
-    "Basé sur Jeukendrup (2014), Burke (2021), Stellingwerff (2019). "
-    "Ratio idéal glucose:fructose entre 0.8:1 et 1.2:1 pour une absorption optimale."
+    "Intervalle ajusté automatiquement et arrondi à la minute (20–30 min). "
+    "Total consommé = quantités prévues exactement."
 )
